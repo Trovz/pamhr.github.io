@@ -38,14 +38,20 @@ export function isDB(value) {
 export const DOC_TYPES = ['Appointment Papers', 'Personal Data Sheet', 'PRC License / Eligibility', 'Service Record', 'Medical Certificate', 'Oath of Office'];
 export const NAV = [['dashboard', 'Dashboard'], ['employees', 'Employees'], ['leave', 'Leave'], ['dtr', 'DTR'], ['payroll', 'Payroll'], ['account', 'Settings & Account']];
 export const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
-export const fm = (n) => (n < 0 ? '−' : '') + '₱' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-export const fm0 = (n) => '₱' + Math.round(n).toLocaleString('en-US');
+const money2 = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money0 = new Intl.NumberFormat('en-US');
+const dateLong = new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+const dateShort = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+const dateShortYear = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const dateWeekday = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
+export const fm = (n) => (n < 0 ? '−' : '') + '₱' + money2.format(Math.abs(n));
+export const fm0 = (n) => '₱' + money0.format(Math.round(n));
 export const D = (s) => new Date(s + 'T00:00:00');
 export const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 export const todayISO = () => iso(new Date());
-export const fd = (s) => s ? D(s).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—';
-export const fdr = (a, b) => a === b ? fd(a) : `${D(a).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${D(b).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-export const fdw = (s) => D(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
+export const fd = (s) => s ? dateLong.format(D(s)) : '—';
+export const fdr = (a, b) => a === b ? fd(a) : `${dateShort.format(D(a))}–${dateShortYear.format(D(b))}`;
+export const fdw = (s) => dateWeekday.format(D(s));
 export const t12 = (t) => {
     if (!t)
         return '—'; const [h, m] = t.split(':').map(Number); return `${(h % 12) || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;

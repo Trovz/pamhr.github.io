@@ -11,6 +11,8 @@ import Dialog from './components/ui/Dialog';
 import NotificationContainer from './components/notifications/Container';
 import { createPayroll, cscLateDays, dtrStatus, migrateDtr, DOC_TYPES, ename, fd, fm, fm0, fdr, ini, loadDB, calcLeaveAccrual, isDB, migrateLeaveApprovals, NAV, nid, periodById, periods, r2, saveDB, seed, sgName, todayISO, t12, workdays, } from './domain';
 const classes = (...v) => v.filter(Boolean).join(' ');
+const moneyFmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const stampFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 function Button({ children, tone = 'default', size = 'normal', className = '', ...props }) {
     const tones = { default: 'border-line bg-card text-ink hover:border-brand hover:bg-interactive-hover hover:text-interactive-hover-text', primary: 'border-brand bg-brand text-white hover:brightness-95', danger: 'border-danger bg-danger text-white hover:brightness-95', ghost: 'border-transparent bg-transparent text-brand hover:bg-interactive-hover hover:text-interactive-hover-text' };
     const label = typeof children === 'string' ? children.trim().toLowerCase() : '';
@@ -611,7 +613,7 @@ export default function App() {
             user: activity.user,
             action: activity.action,
             table: activity.table,
-            time: new Date(activity.ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
+            time: stampFmt.format(new Date(activity.ts)),
         }));
 
         return <DashboardPage
@@ -713,7 +715,7 @@ export default function App() {
         const status = db.periodStatus[period.id] || (records.length ? 'Processing' : 'No records');
         const sum = (k) => records.reduce((s, r) => s + (r[k] ?? 0), 0), selected = records.find(r => r.id === payrollId) || records[0];
         const selectedEmployee = selected && employee(selected.empId);
-        const money = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const money = (n) => moneyFmt.format(n);
         const printRows = records.map(r => {
             const emp = employee(r.empId), dtr = db.dtr.find(d => d.empId === r.empId && d.periodId === period.id);
             return { r, name: ename(emp), dept: get('departments', emp?.deptId)?.name ?? '—', rate: r.monthly / 22, days: dtr ? dtr.present : null };
@@ -751,7 +753,7 @@ export default function App() {
                 <Card><CardTitle action={admins && <Button size="small" tone="primary" onClick={() => open('position')}>Add</Button>}>Positions</CardTitle>{db.positions.map(d => <div className="flex justify-between gap-3 border-t border-line px-5 py-3 text-sm" key={d.id}><span>{d.title} <small className="text-muted">{d.item}</small></span>{admins && <Button size="small" onClick={() => open('removeRef', d.id, 'positions')}>Remove</Button>}</div>)}</Card>
                 <Card><CardTitle>Salary Grades</CardTitle>{db.salaryGrades.map(s => <div className="flex justify-between border-t border-line px-5 py-3 text-sm" key={s.id}><span>SG-{s.grade} · Step {s.step}</span><b>{fm(s.rate)}</b></div>)}<p className="border-t border-line px-5 py-3 text-xs text-muted">Sample rates for demonstration, not the official table.</p></Card>
             </div>}
-            {settingsTab === 'audit' && <Card><CardTitle>Audit Log</CardTitle>{db.audit.length ? <Table headers={['Time', 'User', 'Action', 'Table', 'Detail']}>{db.audit.map(a => tableRow(<>{cell(new Date(a.ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}{cell(a.user)}{cell(a.action)}{cell(a.table)}{cell(a.detail || '')}</>, a.id))}</Table> : <Empty>No activity recorded yet.</Empty>}</Card>}
+            {settingsTab === 'audit' && <Card><CardTitle>Audit Log</CardTitle>{db.audit.length ? <Table headers={['Time', 'User', 'Action', 'Table', 'Detail']}>{db.audit.map(a => tableRow(<>{cell(stampFmt.format(new Date(a.ts)))}{cell(a.user)}{cell(a.action)}{cell(a.table)}{cell(a.detail || '')}</>, a.id))}</Table> : <Empty>No activity recorded yet.</Empty>}</Card>}
             {settingsTab === 'data' && <div className="grid gap-5">
                 <Card><CardTitle>Backup and Restore</CardTitle><div className="grid max-w-2xl gap-4 p-5">
                     <Notice kind="warning">Backups contain sensitive employee records and account passwords in an unencrypted JSON file. Save them only in a secure, access-controlled location. Restoring replaces all data currently stored in this browser.</Notice>

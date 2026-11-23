@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
     CalendarCheck, Check, CheckCircle, CircleAlert, Clock, Copy, Download, Eye,
     Info, LayoutDashboard, List, Lock, LogIn, LogOut, PanelLeftClose, PanelLeftOpen, Pencil,
-    Plus, Printer, RefreshCw, RotateCcw, Trash2, TriangleAlert, UserRound, Users, WalletCards, X,
+    EyeOff, Plus, Printer, RefreshCw, RotateCcw, Trash2, TriangleAlert, UserRound, Users, WalletCards, X,
 } from 'lucide-react';
 import lguLogo from './assets/lgu_logo.png';
 import DashboardPage from './components/dashboard/Page';
@@ -46,13 +46,13 @@ function Input(props) { return <input {...props} className={classes('control', p
 function Select({ name, options, value, required, ...props }) {
     return <select name={name} defaultValue={value} required={required} className="control" {...props}>{options.map((x) => <option value={x[0]} key={x[0]}>{x[1]}</option>)}</select>;
 }
-function Table({ headers, children }) {
-    return <div className="overflow-x-auto"><table className="w-full border-collapse text-left text-sm"><thead><tr>{headers.map((h, i) => <th className="whitespace-nowrap border-b border-line bg-thead px-4 py-3 text-[11px] font-bold uppercase tracking-wide text-muted" key={i}>{h}</th>)}</tr></thead><tbody>{children}</tbody></table></div>;
+function Table({ headers, children, columns = [] }) {
+    return <div className="overflow-x-auto"><table className="w-full border-collapse text-left text-sm"><thead><tr>{headers.map((h, i) => <th className={classes('whitespace-nowrap border-b border-line bg-thead px-4 py-3 text-[11px] font-bold uppercase tracking-wide text-muted', columns[i])} key={i}>{h}</th>)}</tr></thead><tbody>{children}</tbody></table></div>;
 }
 function Empty({ children }) { return <div className="px-5 py-10 text-center text-sm text-muted">{children}</div>; }
-function Notice({ children, kind = 'info' }) {
+function Notice({ children, kind = 'info', onDismiss }) {
     const Icon = kind === 'warning' ? TriangleAlert : kind === 'error' ? CircleAlert : Info;
-    return <div className={classes('notice flex items-start gap-3 rounded-lg border p-3 text-sm', `notice-${kind}`)} role={kind === 'info' ? undefined : 'alert'}><Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" /><div>{children}</div></div>;
+    return <div className={classes('notice flex items-start gap-3 rounded-lg border p-3 text-sm', `notice-${kind}`)} role={kind === 'info' ? undefined : 'alert'}><Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" /><div className="flex-1">{children}</div>{onDismiss && <button type="button" aria-label="Dismiss" onClick={onDismiss} className="-m-1 shrink-0 rounded-md p-1 opacity-70 hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><X aria-hidden="true" className="h-4 w-4" /></button>}</div>;
 }
 function Badge({ children }) {
     const tone = ['Approved', 'Finalized', 'Active', 'Present'].includes(children) ? 'bg-green-100 text-green-800' :
@@ -61,8 +61,8 @@ function Badge({ children }) {
                 ['Processing'].includes(children) ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600';
     return <span className={classes('inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold', tone)}>{children}</span>;
 }
-function Stat({ label, value, hint, children }) {
-    return <Card className="px-5 py-4"><div className="text-xs font-medium text-muted">{label}</div><div className="mt-1 text-2xl font-bold tracking-tight">{value}</div><div className="mt-1 text-xs text-muted">{hint}</div>{children}</Card>;
+function Stat({ label, value, hint, children, className = '' }) {
+    return <Card className={classes('px-5 py-4', className)}><div className="text-xs font-medium text-muted">{label}</div><div className="mt-1 text-2xl font-bold tracking-tight">{value}</div><div className="mt-1 text-xs text-muted">{hint}</div>{children}</Card>;
 }
 function PageTop({ title, subtitle, actions }) {
     return <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-bold tracking-tight">{title}</h1><p className="mt-1 text-sm text-muted">{subtitle}</p></div><div className="flex flex-wrap gap-2">{actions}</div></div>;
@@ -99,6 +99,9 @@ export default function App() {
     const [settingsTab, setSettingsTab] = useState('account');
     const [modal, setModal] = useState(null);
     const [loginError, setLoginError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [rateNoticeHidden, setRateNoticeHidden] = useState(() => { try { return sessionStorage.getItem('pamhr.rateNotice') === '1'; } catch { return false; } });
+    const hideRateNotice = () => { setRateNoticeHidden(true); try { sessionStorage.setItem('pamhr.rateNotice', '1'); } catch { } };
     const [toasts, setToasts] = useState([]);
     const [preview, setPreview] = useState(null);
     const [restoreCandidate, setRestoreCandidate] = useState(null);
@@ -565,6 +568,7 @@ export default function App() {
             if (!rows.length)
                 return notify('No records', 'Process payroll before finalizing.', true);
             update(copy => { copy.payroll.filter(r => r.periodId === p.id).forEach(r => r.status = 'Finalized'); copy.periodStatus[p.id] = 'Finalized'; log(copy, 'Finalized payroll', 'PayrollPeriod', p.label); });
+            setModal(null);
             notify('Period finalized', p.label);
             return;
         }
@@ -582,9 +586,10 @@ export default function App() {
         }
     };
     const employeeOptions = (includeInactive = true) => employees.filter(e => includeInactive || e.status !== 'Inactive').map(e => [e.id, ename(e)]);
-    const tableRow = (children, key, onClick) => <tr key={key} onClick={onClick} className={classes('border-b border-line last:border-0 hover:bg-row-hover', onClick && 'cursor-pointer')}>{children}</tr>;
-    const cell = (children, className = '') => <td className={classes('px-4 py-3 align-middle', className)}>{children}</td>;
-    const rowActions = (...children) => <div className="flex flex-wrap gap-1.5">{children.map((child, i) => <span key={i}>{child}</span>)}</div>;
+    const tableRow = (children, key, onClick) => <tr key={key} onClick={onClick} className={classes('group border-b border-line last:border-0 hover:bg-row-hover', onClick && 'cursor-pointer')}>{children}</tr>;
+    const numCell = 'whitespace-nowrap text-right tabular-nums';
+    const cell = (children, className = '') =><td className={classes('px-4 py-3 align-middle', className)}>{children}</td>;
+    const rowActions = (...children) => <div className="flex items-center gap-1.5">{children.map((child, i) => <span key={i}>{child}</span>)}</div>;
     const dashboard = () => {
         const active = employees.filter(e => e.status === 'Active').length, pending = db.leaves.filter(l => l.status === 'Pending');
         const periodDtr = db.dtr.filter(d => d.periodId === payPeriod && employees.some(e => e.id === d.empId && e.status === 'Active'));
@@ -627,7 +632,7 @@ export default function App() {
     };
     const employeeList = () => {
         const list = employees.filter(e => (!query || `${ename(e)}${e.no}`.toLowerCase().includes(query.toLowerCase())) && (!filters.dept || String(e.deptId) === filters.dept) && (!filters.type || String(e.typeId) === filters.type) && (!filters.status || e.status === filters.status));
-        return <><PageTop title="Employees" subtitle={`${employees.length} records · Employee table`} actions={<Button tone="primary" onClick={() => open('employee')}>Add Employee</Button>} />
+        return <><PageTop title="Employees" subtitle={`${employees.length} employees`} actions={<Button tone="primary" onClick={() => open('employee')}>Add Employee</Button>} />
             <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4"><Input type="search" placeholder="Search name or employee no." aria-label="Search employees" value={query} onChange={(e) => setQuery(e.target.value)} />
                 <Select value={filters.dept} onChange={(e) => setFilters({ ...filters, dept: e.target.value })} options={[['', 'Department: All'], ...db.departments.map(d => [d.id, d.name])]} />
                 <Select value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })} options={[['', 'Type: All'], ...db.types.map(d => [d.id, d.name])]} />
@@ -640,10 +645,10 @@ export default function App() {
                     {cell(get('positions', e.posId)?.title)}
                     {cell(get('departments', e.deptId)?.name)}
                     {cell(get('types', e.typeId)?.name)}
-                    {cell(sgName(db, e.sgId))}
-                    {cell(fd(e.hired))}
+                    {cell(sgName(db, e.sgId), 'whitespace-nowrap')}
+                    {cell(fd(e.hired), 'whitespace-nowrap')}
                     {cell(<Badge>{onLeave ? 'On Leave' : e.status}</Badge>)}
-                    {cell(rowActions(<Button size="small" onClick={(ev) => { ev.stopPropagation(); open('employee', e.id); }}>Edit</Button>, <Button size="small" onClick={(ev) => { ev.stopPropagation(); confirm('deleteEmployee', e.id); }}>Delete</Button>))}
+                    {cell(rowActions(<Button size="small" onClick={(ev) => { ev.stopPropagation(); open('employee', e.id); }}>Edit</Button>, <Button size="small" tone="ghost" className="!text-danger" aria-label={`Delete ${ename(e)}`} title="Delete employee" onClick={(ev) => { ev.stopPropagation(); confirm('deleteEmployee', e.id); }}><Trash2 aria-hidden="true" className="h-3.5 w-3.5" /></Button>))}
                 </>, e.id, () => showEmployee(e.id));
             })}</Table> : <Empty>No employees match these filters. Clear the search or add a new employee.</Empty>}</Card>
         </>;
@@ -700,8 +705,8 @@ export default function App() {
         const rows = employees.filter(e => e.status === 'Active').map(e => ({ e, record: db.dtr.find(d => d.empId === e.id && d.periodId === period.id) }));
         const recorded = rows.filter(r => r.record), absentTotal = recorded.reduce((n, r) => n + r.record.absent, 0), lateTotal = recorded.reduce((n, r) => n + r.record.lateMin, 0);
         const lateText = (m) => m ? `${Math.floor(m / 60)} h ${m % 60} m` : '—';
-        return <><PageTop title="Daily Time Record" subtitle="DTR · Final days per pay period from the employee’s submitted DTR" actions={<Button tone="primary" onClick={() => open('dtr')}>Add Record</Button>} />
-            <div className="mb-4 flex flex-wrap gap-2"><Select value={period.id} onChange={(ev) => setDtrPeriod(ev.target.value)} options={periods().map(p => [p.id, `Period: ${p.label}`])} /><span className="control inline-flex items-center">Working days: {workingDays}</span></div>
+        return <><PageTop title="Daily Time Record" subtitle="Final days per pay period from the employee’s submitted DTR" actions={<Button tone="primary" onClick={() => open('dtr')}>Add Record</Button>} />
+            <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2"><Select className="control w-full sm:w-auto sm:min-w-[280px]" value={period.id} onChange={(ev) => setDtrPeriod(ev.target.value)} options={periods().map(p => [p.id, `Period: ${p.label}`])} /><span className="text-sm text-muted">Working days: <b className="text-ink">{workingDays}</b></span></div>
             <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Stat label="DTR Recorded" value={`${recorded.length} of ${rows.length}`} hint="Active employees" /><Stat label="Days Absent" value={absentTotal} hint="Deducted in payroll" /><Stat label="Late" value={lateText(lateTotal)} hint="Deducted using the CSC table" /><Stat label="Not Recorded" value={rows.length - recorded.length} hint="Needed before processing payroll" /></div>
             <Card><Table headers={['Employee', 'Days present', 'Days absent', 'Late', 'Late (days)', 'Status', '']}>{rows.map(({ e, record }) => tableRow(<>{cell(empName(e.id), 'min-w-[180px]')}{cell(record ? record.present : '—')}{cell(record ? record.absent : '—')}{cell(record ? lateText(record.lateMin) : '—')}{cell(record ? cscLateDays(record.lateMin).toFixed(3) : '—')}{cell(<Badge>{dtrStatus(record)}</Badge>)}{cell(record ? rowActions(<Button size="small" onClick={() => open('dtr', record.id)}>Edit</Button>, <Button size="small" onClick={() => confirm('deleteDtr', record.id)}>Remove</Button>) : <Button size="small" onClick={() => open('dtr', undefined, { empId: e.id })}>Add</Button>)}</>, e.id))}</Table></Card>
         </>;
@@ -727,10 +732,10 @@ export default function App() {
             <div className="print-sign">{['Prepared by (HR)', 'Checked by (Accounting)', 'Approved by'].map(label => <div key={label}><span className="line" />{label}</div>)}</div>
             <p className="print-date">Printed {fd(todayISO())}</p>
         </div>, document.getElementById('print-root'));
-        return <><PageTop title="Payroll" subtitle="Payroll period · Payroll · deductions · employee allowances" actions={<><Button onClick={() => window.print()}>Print</Button><Button onClick={() => doAction('csv')}>Copy as CSV</Button><Button onClick={() => doAction('finalize')}>Finalize Period</Button><Button onClick={() => open('payroll')}>Add Record</Button><Button tone="primary" onClick={() => doAction('process')}>Process Payroll</Button></>} /><div className="mb-4"><Notice kind="warning">Payroll uses sample salary rates and is for demonstration only. Replace them with the LGU-approved salary schedule before relying on payroll amounts.</Notice></div>
-            <div className="mb-4 flex flex-wrap gap-2"><Select value={period.id} onChange={(ev) => setPayPeriod(ev.target.value)} options={periods().map(p => [p.id, `Period: ${p.label}`])} /><span className="control inline-flex items-center">Status: {status}</span></div>
-            <div className="mb-5 grid items-start gap-4 lg:grid-cols-3"><Stat label="Total Gross" value={fm0(sum('gross'))} hint={`${records.length} employees`} /><Stat label="Total Deductions" value={fm0(sum('absentDed') + sum('lateDed') + sum('otherDed'))} hint="Absences, late, GSIS, PhilHealth, Pag-IBIG, loans"><div className="mt-3 text-sm">{[['Absent', sum('absentDed')], ['Late', sum('lateDed')], ...dedNames.map(n => [n, records.reduce((t, r) => t + dedAmount(r, n), 0)]), ['Loans', records.reduce((t, r) => t + loanAmount(r), 0)]].map(([label, value]) => <div className="flex justify-between gap-3 border-t border-line py-2" key={label}><span>{label}</span><b>{value ? `−${fm(value)}` : '—'}</b></div>)}<div className="flex justify-between gap-3 border-t border-line py-2 text-muted"><span>Hazard pay (added to gross)</span><b>{fm(sum('hazard'))}</b></div></div></Stat><Stat label="Total Net Pay" value={fm0(sum('net'))} hint="After deductions" /></div>
-            <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.8fr)_minmax(340px,1fr)]"><Card><CardTitle>Payroll Register</CardTitle>{records.length ? <Table headers={['Employee', 'Basic pay', 'Hazard pay', 'Allowances', 'Gross', 'Absent deduction', 'Late deduction', ...dedNames, 'Loans', 'Net pay', 'Status']}>{records.map(r => tableRow(<>{cell(empName(r.empId), 'min-w-[180px]')}{cell(fm(r.basic))}{cell(r.hazard ? fm(r.hazard) : '—')}{cell(fm(r.other))}{cell(fm(r.gross))}{cell(r.absentDed ? `−${fm(r.absentDed)}` : '0.00')}{cell(r.lateDed ? `−${fm(r.lateDed)}` : '0.00')}{dedNames.map(n => <Fragment key={n}>{cell(dedAmount(r, n) ? `−${fm(dedAmount(r, n))}` : '—')}</Fragment>)}{cell(loanAmount(r) ? `−${fm(loanAmount(r))}` : '—')}{cell(<b>{fm(r.net)}</b>)}{cell(<Badge>{r.status}</Badge>)}</>, r.id, () => setPayrollId(r.id)))}</Table> : <Empty>No payroll records for this period yet. Process payroll to compute active employees.</Empty>}</Card>
+        return <><PageTop title="Payroll" subtitle="Semi-monthly payroll for active employees" actions={<><Button onClick={() => window.print()}>Print</Button><Button onClick={() => doAction('csv')}>Copy as CSV</Button><Button onClick={() => open('payroll')}>Add Record</Button><Button tone="primary" onClick={() => doAction('process')}>Process Payroll</Button><span className="mx-1 hidden w-px self-stretch bg-line lg:block" aria-hidden="true" /><Button onClick={() => onlyAdmin('finalize payroll') && (records.length ? confirm('finalize') : doAction('finalize'))}>Finalize Period</Button></>} />{!rateNoticeHidden && <div className="mb-4"><Notice kind="warning" onDismiss={hideRateNotice}>Payroll uses sample salary rates and is for demonstration only. Replace them with the LGU-approved salary schedule before relying on payroll amounts.</Notice></div>}
+            <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2"><Select className="control w-full sm:w-auto sm:min-w-[280px]" value={period.id} onChange={(ev) => setPayPeriod(ev.target.value)} options={periods().map(p => [p.id, `Period: ${p.label}`])} /><span className="flex items-center gap-2 text-sm text-muted">Status <Badge>{status}</Badge></span></div>
+            <div className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]"><div className="grid gap-4 lg:grid-rows-2"><Stat className="flex flex-col justify-center" label="Total Gross" value={fm0(sum('gross'))} hint={`${records.length} employees`} /><Stat className="flex flex-col justify-center" label="Total Net Pay" value={fm0(sum('net'))} hint="After deductions" /></div><Stat label="Total Deductions" value={fm0(sum('absentDed') + sum('lateDed') + sum('otherDed'))} hint="Absences, late, GSIS, PhilHealth, Pag-IBIG, loans"><div className="mt-3 text-sm">{[['Absent', sum('absentDed')], ['Late', sum('lateDed')], ...dedNames.map(n => [n, records.reduce((t, r) => t + dedAmount(r, n), 0)]), ['Loans', records.reduce((t, r) => t + loanAmount(r), 0)]].map(([label, value]) => <div className="flex justify-between gap-3 border-t border-line py-2" key={label}><span>{label}</span><b>{value ? `−${fm(value)}` : '—'}</b></div>)}<div className="flex justify-between gap-3 border-t border-line py-2 text-muted"><span>Hazard pay (added to gross)</span><b>{fm(sum('hazard'))}</b></div></div></Stat></div>
+            <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.8fr)_minmax(340px,1fr)]"><Card><CardTitle>Payroll Register</CardTitle>{records.length ? <Table columns={['sticky left-0 z-10', ...Array(dedNames.length + 8).fill('text-right')]} headers={['Employee', 'Basic pay', 'Hazard pay', 'Allowances', 'Gross', 'Absent deduction', 'Late deduction', ...dedNames, 'Loans', 'Net pay', 'Status']}>{records.map(r => tableRow(<>{cell(empName(r.empId), 'sticky left-0 z-10 min-w-[180px] whitespace-nowrap bg-card group-hover:bg-row-hover')}{cell(fm(r.basic), numCell)}{cell(r.hazard ? fm(r.hazard) : '—', numCell)}{cell(fm(r.other), numCell)}{cell(fm(r.gross), numCell)}{cell(r.absentDed ? `−${fm(r.absentDed)}` : '0.00', numCell)}{cell(r.lateDed ? `−${fm(r.lateDed)}` : '0.00', numCell)}{dedNames.map(n => <Fragment key={n}>{cell(dedAmount(r, n) ? `−${fm(dedAmount(r, n))}` : '—', numCell)}</Fragment>)}{cell(loanAmount(r) ? `−${fm(loanAmount(r))}` : '—', numCell)}{cell(<b>{fm(r.net)}</b>, numCell)}{cell(<Badge>{r.status}</Badge>)}</>, r.id, () => setPayrollId(r.id)))}</Table> : <Empty>No payroll records for this period yet. Process payroll to compute active employees.</Empty>}</Card>
                 {selected ? <Card><CardTitle action={admins ? <Button size="small" onClick={() => confirm('deletePayroll', selected.id)}>Remove</Button> : undefined}>Payslip · {ename(selectedEmployee)}</CardTitle>
                     {[['Basic Pay (' + sgName(db, selectedEmployee?.sgId) + ', half-month)', fm(selected.basic)], ['Hazard Pay (RHU)', fm(selected.hazard)], ['Other Allowances', fm(selected.other)], ['Gross Pay', fm(selected.gross)], [`Absent deduction (${selected.daysAbsent} days)`, `−${fm(selected.absentDed)}`], [`Late deduction (${(selected.lateDays ?? 0).toFixed(3)} day)`, `−${fm(selected.lateDed ?? 0)}`], ...selected.items.map((x) => [x.name, `−${fm(x.amount)}`]), ['Net Pay', fm(selected.net)], ['Processed by', `${selected.processedBy} · ${fd(selected.processedOn)}`]].map(([label, value], i) => <div className={classes('flex justify-between gap-3 border-t border-line px-5 py-3 text-sm', ['Gross Pay', 'Net Pay'].includes(label) && 'font-bold')} key={i}><span>{label}</span><b>{value}</b></div>)}
                 </Card> : <Card><Empty>Select a payroll record to see its payslip.</Empty></Card>}
@@ -768,13 +773,13 @@ export default function App() {
         if (!modal)
             return null;
         if (modal.type === 'confirm') {
-            const titleMap = { deleteEmployee: 'Delete employee?', deleteLeave: 'Remove leave request?', deleteDtr: 'Remove DTR record?', deletePayroll: 'Remove payroll record?', reset: 'Reset demo data?' };
-            const warning = { deleteEmployee: 'This permanently removes the employee and their 201 file, leave, DTR and payroll records. This action cannot be undone.', deleteLeave: 'This permanently removes the leave request. Approved leave credits are returned.', deleteDtr: 'This permanently removes the days and late time for this pay period. Payroll deductions may change.', deletePayroll: 'This permanently removes the payroll record and payslip for this period.', reset: 'This replaces everything in this browser with the original sample data. This action cannot be undone.' };
+            const titleMap = { deleteEmployee: 'Delete employee?', deleteLeave: 'Remove leave request?', deleteDtr: 'Remove DTR record?', deletePayroll: 'Remove payroll record?', finalize: 'Finalize this pay period?', reset: 'Reset demo data?' };
+            const warning = { deleteEmployee: 'This permanently removes the employee and their 201 file, leave, DTR and payroll records. This action cannot be undone.', deleteLeave: 'This permanently removes the leave request. Approved leave credits are returned.', deleteDtr: 'This permanently removes the days and late time for this pay period. Payroll deductions may change.', deletePayroll: 'This permanently removes the payroll record and payslip for this period.', finalize: `Finalizing ${periodById(payPeriod).label} locks its payroll. Records can no longer be added, processed or removed for this period.`, reset: 'This replaces everything in this browser with the original sample data. This action cannot be undone.' };
             const entity = modal.id ? employee(modal.id) : null;
             return <Dialog title={titleMap[modal.extra] || 'Confirm action'} subtitle="Review before continuing." onClose={() => setModal(null)}>
                 {entity && <div className="surface-muted mb-4 rounded-lg p-4"><b>{ename(entity)}</b><div className="mt-1 text-sm text-muted">{entity.no} · {get('positions', entity.posId)?.title}</div></div>}
                 <Notice kind="warning">{warning[modal.extra] || 'This action cannot be undone.'}</Notice>
-                <div className="mt-5 flex justify-end gap-2"><Button onClick={() => setModal(null)}>Cancel</Button><Button tone="danger" onClick={() => doAction(modal.extra, modal.id)}>{modal.extra === 'reset' ? 'Reset Data' : modal.extra === 'deleteEmployee' ? 'Delete Employee' : 'Remove'}</Button></div>
+                <div className="mt-5 flex justify-end gap-2"><Button onClick={() => setModal(null)}>Cancel</Button><Button tone="danger" onClick={() => doAction(modal.extra, modal.id)}>{modal.extra === 'reset' ? 'Reset Data' : modal.extra === 'deleteEmployee' ? 'Delete Employee' : modal.extra === 'finalize' ? 'Finalize Period' : 'Remove'}</Button></div>
             </Dialog>;
         }
         const e = modal.id ? employee(modal.id) : null;
@@ -946,7 +951,7 @@ export default function App() {
                             <p className="mt-1 text-sm text-muted">Use your PamHR account to continue.</p>
                         </div>
                         <Field label="Username" required><span className="login-input-wrap relative block"><UserRound className="login-input-icon pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" /><Input name="username" autoComplete="username" autoFocus placeholder=" " required className="w-full pl-9" /></span></Field>
-                        <Field label="Password" required><span className="login-input-wrap relative block"><Lock className="login-input-icon pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" /><Input name="password" type="password" autoComplete="current-password" placeholder=" " required className="w-full pl-9" /></span></Field>
+                        <Field label="Password" required><span className="login-input-wrap relative block"><Lock className="login-input-icon pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" /><Input name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder=" " required className="w-full pl-9 pr-10" /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(v => !v)} className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{showPassword ? <EyeOff aria-hidden="true" className="h-4 w-4" /> : <Eye aria-hidden="true" className="h-4 w-4" />}</button></span></Field>
                         {loginError && <Notice kind="error">{loginError}</Notice>}
                         <Button type="submit" tone="primary" className="w-full"><LogIn className="h-4 w-4" aria-hidden="true" />Sign in</Button>
                     </form>
@@ -957,7 +962,7 @@ export default function App() {
     return <>
         <div className={classes('min-h-screen md:grid', collapsed ? 'md:grid-cols-[76px_minmax(0,1fr)]' : 'md:grid-cols-[250px_minmax(0,1fr)]')}>
             {mobileNav && <button aria-label="Close navigation" className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={() => setMobileNav(false)} />}
-            <aside className={classes('sidebar-ink fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col bg-side px-3 py-5 transition-transform md:sticky md:top-0 md:h-screen md:w-auto md:translate-x-0', mobileNav ? 'translate-x-0' : '-translate-x-full', collapsed && 'md:px-2')}>
+            <aside className={classes('sidebar-ink fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col border-r border-line bg-side px-3 py-5 transition-transform md:sticky md:top-0 md:h-screen md:w-auto md:translate-x-0', mobileNav ? 'translate-x-0' : '-translate-x-full', collapsed && 'md:px-2')}>
                 <div className={classes('mb-6 flex items-center gap-2 px-2', collapsed && 'md:flex-col md:items-center md:gap-3 md:px-0')}>{logoVisible && <button type="button" className="shrink-0 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" aria-label="Hide LGU Pamplona logo" title="Hide logo" onClick={() => setLogoVisible(false)}><img src={lguLogo} alt="LGU Pamplona seal" className="h-10 w-10 rounded-full bg-white object-contain p-0.5" /></button>}<div className={classes('min-w-0 flex-1', collapsed && 'md:hidden')}><b className="block text-xl">PamHR</b><small className="sidebar-muted block text-xs">LGU Pamplona, Camarines Sur</small></div><button className="sidebar-toggle rounded-lg border p-2" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!collapsed} title={collapsed ? 'Expand' : 'Collapse'} onClick={() => setCollapsed(!collapsed)}>{collapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}</button></div>
                 <nav aria-label="Main" className="grid gap-1">{NAV.map(([key, label]) => {
                     const Icon = icons[key];

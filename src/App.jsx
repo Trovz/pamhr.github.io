@@ -50,9 +50,9 @@ function Table({ headers, children, columns = [] }) {
     return <div className="overflow-x-auto"><table className="w-full border-collapse text-left text-sm"><thead><tr>{headers.map((h, i) => <th className={classes('whitespace-nowrap border-b border-line bg-thead px-4 py-3 text-[11px] font-bold uppercase tracking-wide text-muted', columns[i])} key={i}>{h}</th>)}</tr></thead><tbody>{children}</tbody></table></div>;
 }
 function Empty({ children }) { return <div className="px-5 py-10 text-center text-sm text-muted">{children}</div>; }
-function Notice({ children, kind = 'info', onDismiss }) {
+function Notice({ children, kind = 'info' }) {
     const Icon = kind === 'warning' ? TriangleAlert : kind === 'error' ? CircleAlert : Info;
-    return <div className={classes('notice flex items-start gap-3 rounded-lg border p-3 text-sm', `notice-${kind}`)} role={kind === 'info' ? undefined : 'alert'}><Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" /><div className="flex-1">{children}</div>{onDismiss && <button type="button" aria-label="Dismiss" onClick={onDismiss} className="-m-1 shrink-0 rounded-md p-1 opacity-70 hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><X aria-hidden="true" className="h-4 w-4" /></button>}</div>;
+    return <div className={classes('notice flex items-start gap-3 rounded-lg border p-3 text-sm', `notice-${kind}`)} role={kind === 'info' ? undefined : 'alert'}><Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" /><div>{children}</div></div>;
 }
 function Badge({ children }) {
     const tone = ['Approved', 'Finalized', 'Active', 'Present'].includes(children) ? 'bg-green-100 text-green-800' :
@@ -99,8 +99,6 @@ export default function App() {
     const [modal, setModal] = useState(null);
     const [loginError, setLoginError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [rateNoticeHidden, setRateNoticeHidden] = useState(() => { try { return sessionStorage.getItem('pamhr.rateNotice') === '1'; } catch { return false; } });
-    const hideRateNotice = () => { setRateNoticeHidden(true); try { sessionStorage.setItem('pamhr.rateNotice', '1'); } catch { } };
     const [toasts, setToasts] = useState([]);
     const [preview, setPreview] = useState(null);
     const [restoreCandidate, setRestoreCandidate] = useState(null);
@@ -599,7 +597,7 @@ export default function App() {
             { label: 'Active Employees', value: active, hint: `${db.departments.length} departments` },
             { label: 'Pending Leave Requests', value: pending.length, hint: `${db.overtime.filter(o => o.status === 'Pending').length} overtime pending for CTO` },
             { label: `DTR · ${periodById(payPeriod).label}`, value: periodDtr.length, hint: `${Math.max(0, active - periodDtr.length)} active employees not recorded` },
-            { label: `Payroll · ${period.label}`, value: fm0(payroll.reduce((s, r) => s + r.net, 0)), hint: `Demo rates · ${payroll.length} records · net pay` },
+            { label: `Payroll · ${period.label}`, value: fm0(payroll.reduce((s, r) => s + r.net, 0)), hint: `${payroll.length} records · net pay` },
         ];
         const pendingLeaves = pending.map(leave => ({
             id: leave.id,
@@ -731,7 +729,7 @@ export default function App() {
             <div className="print-sign">{['Prepared by (HR)', 'Checked by (Accounting)', 'Approved by'].map(label => <div key={label}><span className="line" />{label}</div>)}</div>
             <p className="print-date">Printed {fd(todayISO())}</p>
         </div>, document.getElementById('print-root'));
-        return <><PageTop title="Payroll" subtitle="Semi-monthly payroll for active employees" actions={<><Button onClick={() => window.print()}>Print</Button><Button onClick={() => doAction('csv')}>Copy as CSV</Button><Button onClick={() => open('payroll')}>Add Record</Button><Button tone="primary" onClick={() => doAction('process')}>Process Payroll</Button><span className="mx-1 hidden w-px self-stretch bg-line lg:block" aria-hidden="true" /><Button onClick={() => onlyAdmin('finalize payroll') && (records.length ? confirm('finalize') : doAction('finalize'))}>Finalize Period</Button></>} />{!rateNoticeHidden && <div className="mb-4"><Notice kind="warning" onDismiss={hideRateNotice}>Payroll uses sample salary rates and is for demonstration only. Replace them with the LGU-approved salary schedule before relying on payroll amounts.</Notice></div>}
+        return <><PageTop title="Payroll" subtitle="Semi-monthly payroll for active employees" actions={<><Button onClick={() => window.print()}>Print</Button><Button onClick={() => doAction('csv')}>Copy as CSV</Button><Button onClick={() => open('payroll')}>Add Record</Button><Button tone="primary" onClick={() => doAction('process')}>Process Payroll</Button><span className="mx-1 hidden w-px self-stretch bg-line lg:block" aria-hidden="true" /><Button onClick={() => onlyAdmin('finalize payroll') && (records.length ? confirm('finalize') : doAction('finalize'))}>Finalize Period</Button></>} />
             <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2"><Select className="control w-full sm:w-auto sm:min-w-[280px]" value={period.id} onChange={(ev) => setPayPeriod(ev.target.value)} options={periods().map(p => [p.id, `Period: ${p.label}`])} /><span className="flex items-center gap-2 text-sm text-muted">Status <Badge>{status}</Badge></span></div>
             <div className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]"><div className="grid gap-4 lg:grid-rows-2"><Stat className="flex flex-col justify-center" label="Total Gross" value={fm0(sum('gross'))} hint={`${records.length} employees`} /><Stat className="flex flex-col justify-center" label="Total Net Pay" value={fm0(sum('net'))} hint="After deductions" /></div><Stat label="Total Deductions" value={fm0(sum('absentDed') + sum('lateDed') + sum('otherDed'))} hint="Absences, late, GSIS, PhilHealth, Pag-IBIG, loans"><div className="mt-3 text-sm">{[['Absent', sum('absentDed')], ['Late', sum('lateDed')], ...dedNames.map(n => [n, records.reduce((t, r) => t + dedAmount(r, n), 0)]), ['Loans', records.reduce((t, r) => t + loanAmount(r), 0)]].map(([label, value]) => <div className="flex justify-between gap-3 border-t border-line py-2" key={label}><span>{label}</span><b>{value ? `−${fm(value)}` : '—'}</b></div>)}<div className="flex justify-between gap-3 border-t border-line py-2 text-muted"><span>Hazard pay (added to gross)</span><b>{fm(sum('hazard'))}</b></div></div></Stat></div>
             <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.8fr)_minmax(340px,1fr)]"><Card><CardTitle>Payroll Register</CardTitle>{records.length ? <Table columns={['sticky left-0 z-10', ...Array(dedNames.length + 8).fill('text-right')]} headers={['Employee', 'Basic pay', 'Hazard pay', 'Allowances', 'Gross', 'Absent deduction', 'Late deduction', ...dedNames, 'Loans', 'Net pay', 'Status']}>{records.map(r => tableRow(<>{cell(empName(r.empId), 'sticky left-0 z-10 min-w-[180px] whitespace-nowrap bg-card group-hover:bg-row-hover')}{cell(fm(r.basic), numCell)}{cell(r.hazard ? fm(r.hazard) : '—', numCell)}{cell(fm(r.other), numCell)}{cell(fm(r.gross), numCell)}{cell(r.absentDed ? `−${fm(r.absentDed)}` : '0.00', numCell)}{cell(r.lateDed ? `−${fm(r.lateDed)}` : '0.00', numCell)}{dedNames.map(n => <Fragment key={n}>{cell(dedAmount(r, n) ? `−${fm(dedAmount(r, n))}` : '—', numCell)}</Fragment>)}{cell(loanAmount(r) ? `−${fm(loanAmount(r))}` : '—', numCell)}{cell(<b>{fm(r.net)}</b>, numCell)}{cell(<Badge>{r.status}</Badge>)}</>, r.id, () => setPayrollId(r.id)))}</Table> : <Empty>No payroll records for this period yet. Process payroll to compute active employees.</Empty>}</Card>

@@ -56,9 +56,8 @@ function Notice({ children, kind = 'info', onDismiss }) {
 }
 function Badge({ children }) {
     const tone = ['Approved', 'Finalized', 'Active', 'Present'].includes(children) ? 'bg-green-100 text-green-800' :
-        ['Pending', 'Late', 'Undertime', 'On Leave', 'Late & Undertime'].includes(children) ? 'bg-amber-100 text-amber-800' :
-            ['Rejected', 'Absent'].includes(children) ? 'bg-red-100 text-red-800' :
-                ['Processing'].includes(children) ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600';
+        ['Pending', 'Processing', 'Late', 'Undertime', 'On Leave', 'Late & Undertime'].includes(children) ? 'bg-amber-100 text-amber-800' :
+            ['Rejected', 'Absent'].includes(children) ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-600';
     return <span className={classes('inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold', tone)}>{children}</span>;
 }
 function Stat({ label, value, hint, children, className = '' }) {

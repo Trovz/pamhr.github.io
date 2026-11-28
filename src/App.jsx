@@ -293,7 +293,7 @@ export default function App() {
                     log(copy, 'Updated employee', 'Employee', ename(copy.employees.find(e => e.id === id)));
                 }
                 else {
-                    const next = nid(copy.employees), e = { id: next, no: `EMP-${String(Math.max(...copy.employees.map(x => +x.no.slice(4))) + 1).padStart(4, '0')}`, ...value };
+                    const next = nid(copy.employees), e = { id: next, no: `EMP-${String(Math.max(0, ...copy.employees.map(x => +x.no.slice(4))) + 1).padStart(4, '0')}`, ...value };
                     copy.employees.push(e);
                     DOC_TYPES.forEach(doc => copy.docs.push({ empId: next, type: doc, date: null }));
                     copy.leaveTypes.forEach(t => copy.credits.push({ empId: next, typeId: t.id, total: [1, 2].includes(t.id) ? 0 : t.annual, used: 0 }));
@@ -329,11 +329,12 @@ export default function App() {
             const leave = db.leaves.find(x => x.id === id);
             if (!f.decision)
                 return;
-            if (f.decision === 'Approved' && credits(leave.empId).find(x => x.type.id === leave.typeId).remaining < leave.days)
+            const info = credits(leave.empId).find(x => x.type.id === leave.typeId);
+            if (f.decision === 'Approved' && info.remaining < leave.days)
                 return notify('Cannot approve', 'Not enough leave credits remain for this request.', true);
             update(copy => {
                 const l = copy.leaves.find(x => x.id === id), c = copy.credits.find(x => x.empId === l.empId && x.typeId === l.typeId);
-                if (f.decision === 'Approved' && !c.balanceAsOf)
+                if (f.decision === 'Approved' && c && !info.configured)
                     c.used = r2(c.used + l.days);
                 copy.leaveApprovals.push({
                     id: nid(copy.leaveApprovals), leaveRequestId: l.id, approvedByUserId: activeUser.id,
@@ -366,6 +367,9 @@ export default function App() {
             const lateMin = Math.floor(+f.lateHours || 0) * 60 + Math.floor(+f.lateMinutes || 0);
             if (!period || [present, absent, lateMin].some(n => !Number.isFinite(n) || n < 0))
                 return notify('Check the entries', 'Days and late time cannot be blank or negative.', true);
+            const touched = [f.periodId, id ? db.dtr.find(d => d.id === id)?.periodId : null];
+            if (touched.some(pid => pid && db.periodStatus[pid] === 'Finalized'))
+                return notify('Period is finalized', 'DTR records cannot be added or changed after payroll is finalized.', true);
             const workingDays = workdays(db, period.start, period.end);
             if (present + absent > workingDays)
                 return notify('Check the days', `Days present plus days absent cannot be more than the ${workingDays} working days in this period.`, true);
@@ -449,9 +453,10 @@ export default function App() {
         if (action === 'reset') {
             if (!onlyAdmin('reset demo data'))
                 return;
-            setDb(seed());
+            const fresh = seed();
+            setDb(fresh);
             setModal(null);
-            setUser(db.users[0]);
+            setUser(fresh.users[0]);
             sessionStorage.setItem('pamhr.u', '1');
             setEmployeeId(null);
             notify('Demo data reset');
@@ -464,6 +469,11 @@ export default function App() {
             const e = employee(id);
             if (!e)
                 return;
+            if (db.payroll.some(r => r.empId === e.id && db.periodStatus[r.periodId] === 'Finalized')) {
+                setModal(null);
+                notify('Employee has finalized payroll', 'Records in a finalized period cannot be removed. Set the employee to Inactive instead.', true);
+                return;
+            }
             update(copy => {
                 const leaveIds = new Set(copy.leaves.filter(l => l.empId === e.id).map(l => l.id));
                 copy.leaveApprovals = copy.leaveApprovals.filter(approval => !leaveIds.has(approval.leaveRequestId));
@@ -480,10 +490,11 @@ export default function App() {
             const l = db.leaves.find(x => x.id === id);
             if (!l)
                 return;
+            const info = credits(l.empId).find(x => x.type.id === l.typeId);
             update(copy => {
                 if (l.status === 'Approved') {
                     const c = copy.credits.find(x => x.empId === l.empId && x.typeId === l.typeId);
-                    if (!c.balanceAsOf)
+                    if (c && !info.configured)
                         c.used = r2(Math.max(0, c.used - l.days));
                 }
                 copy.leaveApprovals = copy.leaveApprovals.filter(approval => approval.leaveRequestId !== l.id);
@@ -496,6 +507,11 @@ export default function App() {
         }
         if (action === 'deleteDtr') {
             const d = db.dtr.find(x => x.id === id);
+            if (db.periodStatus[d.periodId] === 'Finalized') {
+                setModal(null);
+                notify('Period is finalized', 'DTR records cannot be removed after payroll is finalized.', true);
+                return;
+            }
             const label = periodById(d.periodId)?.label ?? '';
             update(copy => { copy.dtr = copy.dtr.filter(x => x.id !== id); log(copy, 'Removed DTR record', 'DTR', `${empName(d.empId)} ${label}`); });
             setModal(null);

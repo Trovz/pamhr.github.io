@@ -82,6 +82,11 @@ describe('cscLateDays', () => {
         expect(cscLateDays(480)).toBe(1);
     });
 
+    it('matches every value of the CSC table for 1 to 60 minutes', () => {
+        const table = '.002 .004 .006 .008 .010 .012 .015 .017 .019 .021 .023 .025 .027 .029 .031 .033 .035 .037 .040 .042 .044 .046 .048 .050 .052 .054 .056 .058 .060 .062 .065 .067 .069 .071 .073 .075 .077 .079 .081 .083 .085 .087 .090 .092 .094 .096 .098 .100 .102 .104 .106 .108 .110 .112 .115 .117 .119 .121 .123 .125'.split(' ').map(Number);
+        table.forEach((value, i) => expect(cscLateDays(i + 1)).toBe(value));
+    });
+
     it('converts minutes using the CSC table values', () => {
         expect(cscLateDays(1)).toBe(0.002);
         expect(cscLateDays(15)).toBe(0.031);

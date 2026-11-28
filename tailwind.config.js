@@ -3,6 +3,7 @@ export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
+      boxShadow: { card: 'var(--shadow)', pop: 'var(--shadow-pop)' },
       colors: {
         bg: 'var(--bg)', card: 'var(--card)', ink: 'var(--ink)', muted: 'var(--muted)',
         line: 'var(--line)', thead: 'var(--thead)', brand: 'var(--brand)', side: 'var(--side)',

@@ -7,7 +7,7 @@ export default function NotificationToast({ title, message, role = 'success' }) 
   return (
     <div
       role={isSuccess ? 'status' : 'alert'}
-      className={`toast-card flex items-start gap-3 rounded-lg border-l-4 p-4 shadow-lg toast-${role}`}
+      className={`toast-card flex items-start gap-3 rounded border-l-4 p-4  toast-${role}`}
     >
       <Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
       <div className="min-w-0">

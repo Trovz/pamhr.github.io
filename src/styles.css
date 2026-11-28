@@ -3,18 +3,18 @@
 @tailwind utilities;
 
 :root {
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
-  color: #0f2b4f;
-  background: #e6f0fc;
+  font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #1b1f24;
+  background: #eceef0;
   color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --bg: #e6f0fc;
+  --bg: #eceef0;
   --card: #fff;
-  --ink: #0f2b4f;
-  --muted: #46638a;
-  --line: #c4d9f2;
-  --thead: #dbe9fb;
+  --ink: #1b1f24;
+  --muted: #565e68;
+  --line: #cdd2d8;
+  --thead: #e8ebee;
   --brand: #1558b0;
   --side: #123f82;
   --side-ink: #eaf3ff;
@@ -22,33 +22,33 @@
   --side-active: #2a6fd0;
   --side-active-ink: #ffffff;
   --danger: #b3261e;
-  --interactive-hover: #cfe2fa;
-  --interactive-hover-text: #0f2b4f;
-  --row-hover: #dbe9fb;
+  --interactive-hover: #e3e6ea;
+  --interactive-hover-text: #1b1f24;
+  --row-hover: #eef0f3;
   --toast-success-bg: #e3f4ea;
   --toast-success-border: #18794e;
   --toast-success-text: #145c3d;
   --toast-error-bg: #fce7e4;
   --toast-error-border: #b3261e;
   --toast-error-text: #842018;
-  --notice-info-bg: #d3e5fb;
-  --notice-info-border: #2f78d1;
-  --notice-info-text: #0f3f78;
+  --notice-info-bg: #f3f6fa;
+  --notice-info-border: #8aa6c8;
+  --notice-info-text: #1b3552;
   --notice-warning-bg: #fff0d2;
   --notice-warning-border: #9a5b00;
   --notice-warning-text: #754600;
-  --surface-muted: #dbe9fb;
+  --surface-muted: #e9ecef;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  color: #e7ecf5;
-  background: #0c1626;
-  --bg: #0c1626;
-  --card: #14233a;
-  --ink: #e7ecf5;
-  --muted: #93a0ba;
-  --line: #26334a;
-  --thead: #1a2739;
+  color: #e6e8eb;
+  background: #121417;
+  --bg: #121417;
+  --card: #1a1d21;
+  --ink: #e6e8eb;
+  --muted: #9aa2ac;
+  --line: #2f353c;
+  --thead: #22262b;
   --brand: #6aa3f5;
   --side: #0b1d3a;
   --side-ink: #c9d5ea;
@@ -56,33 +56,30 @@
   --side-active: #1f4b8f;
   --side-active-ink: #fff;
   --danger: #b3261e;
-  --interactive-hover: #25477c;
+  --interactive-hover: #2a3038;
   --interactive-hover-text: #fff;
-  --row-hover: #222f43;
+  --row-hover: #20242a;
   --toast-success-bg: #15372a;
   --toast-success-border: #4cc08a;
   --toast-success-text: #b5ebd0;
   --toast-error-bg: #3d1d19;
   --toast-error-border: #f08a7e;
   --toast-error-text: #ffd1cb;
-  --notice-info-bg: #19304f;
-  --notice-info-border: #7faaf0;
-  --notice-info-text: #c5d9fa;
+  --notice-info-bg: #1d2530;
+  --notice-info-border: #5d7ea8;
+  --notice-info-text: #c9d6e6;
   --notice-warning-bg: #3b2c10;
   --notice-warning-border: #e8a33d;
   --notice-warning-text: #f5d89d;
-  --surface-muted: #1a2739;
+  --surface-muted: #22262b;
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.45; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
-.login-screen-bg {
-  background:
-    radial-gradient(ellipse at 12% 15%, rgba(147, 197, 253, .38), transparent 42%),
-    radial-gradient(ellipse at 88% 85%, rgba(191, 219, 254, .55), transparent 44%),
-    var(--bg);
-}
+table { font-variant-numeric: tabular-nums; }
+h1, h2, h3 { letter-spacing: -0.01em; }
+.login-screen-bg { background: var(--bg); }
 .login-brand-panel {
   background: var(--side);
   color: var(--side-ink);
@@ -111,7 +108,7 @@ button { cursor: pointer; }
   width: 100%;
   min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 4px;
   background: var(--card);
   padding: 9px 11px;
   color: var(--ink);
@@ -125,8 +122,8 @@ button { cursor: pointer; }
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background: #e4edfb;
-  color: #1f5fbf;
+  background: #dfe6ef;
+  color: #174a94;
   font-weight: 700;
   font-size: 12px;
 }

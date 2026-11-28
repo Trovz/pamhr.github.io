@@ -4,7 +4,7 @@ import DashboardTable from './Table';
 export default function PendingLeavePanel({ leaves, onViewAll, onReview }) {
   const action = (
     <button
-      className="rounded-lg px-2.5 py-1 text-xs font-semibold text-brand hover:bg-interactive-hover hover:text-interactive-hover-text"
+      className="rounded px-2.5 py-1 text-xs font-semibold text-brand hover:bg-interactive-hover hover:text-interactive-hover-text"
       onClick={onViewAll}
       type="button"
     >
@@ -20,7 +20,7 @@ export default function PendingLeavePanel({ leaves, onViewAll, onReview }) {
       leave.dateRange,
       leave.days,
       <button
-        className="rounded-lg border border-line bg-card px-2.5 py-1 text-xs font-semibold text-ink hover:border-brand hover:bg-interactive-hover hover:text-interactive-hover-text"
+        className="rounded border border-line bg-card px-2.5 py-1 text-xs font-semibold text-ink hover:border-brand hover:bg-interactive-hover hover:text-interactive-hover-text"
         key="review"
         onClick={() => onReview(leave.id)}
         type="button"

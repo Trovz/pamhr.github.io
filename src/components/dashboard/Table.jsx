@@ -10,7 +10,7 @@ export default function DashboardTable({ headers, rows, emptyMessage }) {
           <tr>
             {headers.map((header, index) => (
               <th
-                className="whitespace-nowrap border-b border-line bg-thead px-4 py-3 text-[11px] font-bold uppercase tracking-wide text-muted"
+                className="whitespace-nowrap border-b border-line bg-thead px-4 py-3 text-xs font-semibold text-muted"
                 key={index}
               >
                 {header}

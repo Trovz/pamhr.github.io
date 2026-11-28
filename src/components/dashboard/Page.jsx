@@ -24,7 +24,7 @@ export default function DashboardPage({
           <p className="mt-1 text-sm text-muted">{userName} · Municipal HR Office</p>
         </div>
         <button
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+          className="inline-flex items-center justify-center gap-2 rounded border border-brand bg-brand px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
           onClick={onAddEmployee}
           type="button"
         >

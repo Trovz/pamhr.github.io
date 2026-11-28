@@ -18,7 +18,7 @@ export default function Dialog({ children, title, subtitle, onClose }) {
                             field.focus();
                         }
                     }}
-                    className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-line bg-card p-5 shadow-2xl focus:outline-none sm:p-6">
+                    className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-md border border-line bg-card p-5 focus:outline-none sm:p-6">
                     <div className="mb-5 flex items-start justify-between gap-4">
                         <div>
                             <DialogPrimitive.Title className="text-xl font-bold">{title}</DialogPrimitive.Title>
